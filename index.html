@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call App</title>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 520px;
+      margin: auto;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .logo {
+      text-align: center;
+      font-size: 32px;
+      font-weight: bold;
+      margin: 35px 0 10px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #aaa;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #1d1d1d;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 18px;
+      border: 1px solid #303030;
+    }
+
+    h2, h3 {
+      margin-top: 0;
+    }
+
+    input,
+    button,
+    select {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 0;
+      font-size: 16px;
+    }
+
+    input,
+    select {
+      background: #292929;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: #25d366;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #333;
+      color: white;
+    }
+
+    button.danger {
+      background: #e53935;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      background: #171717;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+      color: #aaa;
+      font-size: 14px;
+      word-break: break-word;
+    }
+
+    .profile-preview {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      margin: 10px auto 18px;
+      border: 3px solid #25d366;
+      background: #333;
+    }
+
+    .voice-item {
+      background: #282828;
+      border: 1px solid #3b3b3b;
+      padding: 14px;
+      border-radius: 14px;
+      margin-top: 12px;
+    }
+
+    .voice-name {
+      font-size: 17px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .voice-info {
+      color: #999;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .voice-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .voice-actions button {
+      margin-top: 0;
+      flex: 1;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    .call-avatar {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      margin: 50px auto 15px;
+      border: 4px solid #25d366;
+      background: #333;
+    }
+
+    .call-name {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .call-status {
+      text-align: center;
+      color: #aaa;
+      margin-top: 8px;
+    }
+
+    .timer {
+      text-align: center;
+      font-size: 18px;
+      margin: 20px 0;
+    }
+
+    .call-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .call-buttons button {
+      flex: 1;
+    }
+
+    .room-code {
+      text-align: center;
+      font-size: 30px;
+      letter-spacing: 5px;
+      font-weight: bold;
+      background: #292929;
+      padding: 18px;
+      border-radius: 15px;
+      margin: 15px 0;
+      user-select: all;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    .section-title {
+      margin-top: 5px;
+      margin-bottom: 12px;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .recording {
+      border: 1px solid #25d366;
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 12px;
+      color: #25d366;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- LANDING -->
+  <section id="landingScreen" class="screen active">
+
+    <div class="logo">📞 Call App</div>
+    <div class="subtitle">Private voice calling</div>
+
+    <div class="card">
+      <h2>Join a Call</h2>
+
+      <input
+        id="roomCodeInput"
+        type="text"
+        placeholder="Enter Room Code"
+        autocomplete="off"
+      >
+
+      <button onclick="joinRoom()">
+        Join Call
+      </button>
+
+      <div id="joinStatus" class="status">
+        Enter a room code to join.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Admin Access</h2>
+
+      <input
+        id="adminPasswordInput"
+        type="password"
+        placeholder="Enter Admin Password"
+        autocomplete="off"
+      >
+
+      <button onclick="adminLogin()">
+        Enter Admin
+      </button>
+
+      <div id="adminLoginStatus" class="status">
+        Admin access is restricted.
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ADMIN -->
+  <section id="adminScreen" class="screen">
+
+    <div class="logo">⚙️ Admin Mode</div>
+    <div class="subtitle">Manage your call and voices</div>
+
+    <!-- PROFILE -->
+    <div class="card">
+
+      <h2>Avatar & Profile</h2>
+
+      <img
+        id="adminAvatarPreview"
+        class="profile-preview"
+        src=""
+        alt="Avatar"
+      >
+
+      <input
+        id="avatarInput"
+        type="file"
+        accept="image/*"
+      >
+
+      <input
+        id="profileNameInput"
+        type="text"
+        placeholder="Your display name"
+      >
+
+      <button onclick="saveProfile()">
+        Save Profile
+      </button>
+
+      <div id="profileStatus" class="status">
+        Profile is stored on this device.
+      </div>
+
+    </div>
+
+
+    <!-- ROOM -->
+    <div class="card">
+
+      <h2>Room</h2>
+
+      <p class="small">
+        Create a room and give the room code to the person you want to call.
+      </p>
+
+      <button onclick="createRoom()" id="createRoomButton">
+        Create Room
+      </button>
+
+      <div id="roomBox" class="hidden">
+
+        <div class="small">
+          Your Room Code:
+        </div>
+
+        <div id="roomCodeDisplay" class="room-code">
+          ------
+        </div>
+
+        <button class="secondary" onclick="copyRoomCode()">
+          Copy Room Code
+        </button>
+
+        <div id="roomStatus" class="status">
+          Waiting for the other person...
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VOICE LAB -->
+    <div class="card">
+
+      <h2 class="section-title">🎙️ Voice Lab</h2>
+
+      <div class="status" id="voiceLabStatus">
+        Voice Lab is ACTIVE.
+      </div>
+
+      <p class="small">
+        Upload a clean voice recording, give it a name, and save it.
+        Saved samples remain available on this device.
+      </p>
+
+      <input
+        id="voiceNameInput"
+        type="text"
+        placeholder="Voice name, e.g. SpongeBob Voice"
+      >
+
+      <input
+        id="voiceFileInput"
+        type="file"
+        accept="audio/*,video/*"
+      >
+
+      <button onclick="saveVoiceSample()">
+        Save Voice Sample
+      </button>
+
+      <div id="voiceSaveStatus" class="status">
+        No new sample selected.
+      </div>
+
+      <h3 style="margin-top:25px;">
+        Saved Voices
+      </h3>
+
+      <div id="voiceList">
+        Loading voices...
+      </div>
+
+    </div>
+
+
+    <button class="danger" onclick="adminLogout()">
+      Logout Admin
+    </button>
+
+  </section>
+
+
+  <!-- CONSUMER -->
+  <section id="consumerScreen" class="screen">
+
+    <div class="logo">📞 Call App</div>
+    <div class="subtitle">Join a voice call</div>
+
+    <div class="card">
+
+      <h2>Join Call</h2>
+
+      <input
+        id="consumerRoomInput"
+        type="text"
+        placeholder="Enter Room Code"
+        autocomplete="off"
+      >
+
+      <button onclick="consumerJoinRoom()">
+        Join Call
+      </button>
+
+      <div id="consumerStatus" class="status">
+        Waiting for room code.
+      </div>
+
+    </div>
+
+    <button class="secondary" onclick="showScreen('landingScreen')">
+      Back
+    </button>
+
+  </section>
+
+
+  <!-- CALL -->
+  <section id="callScreen" class="screen">
+
+    <img
+      id="callAvatar"
+      class="call-avatar"
+      src=""
+      alt="Avatar"
+    >
+
+    <div id="callName" class="call-name">
+      Call
+    </div>
+
+    <div id="callStatus" class="call-status">
+      Connecting...
+    </div>
+
+    <div id="callTimer" class="timer">
+      00:00
+    </div>
+
+    <audio
+      id="remoteAudio"
+      autoplay
+      playsinline
+    ></audio>
+
+    <button id="soundButton" onclick="enableCallSound()">
+      🔊 TURN ON CALL SOUND
+    </button>
+
+    <div class="call-buttons">
+
+      <button
+        id="muteButton"
+        class="secondary"
+        onclick="toggleMute()"
+      >
+        🎤 Mute
+      </button>
+
+      <button
+        class="danger"
+        onclick="endCall()"
+      >
+        End Call
+      </button>
+
+    </div>
+
+  </section>
+
+</div>
+
+
+<script>
+
+  /* =========================================================
+     SETTINGS
+  ========================================================= */
+
+  /*
+    CHANGE THIS PASSWORD.
+    Example:
+
+    const ADMIN_PASSWORD = "MySecretPassword123";
+  */
+
+  const ADMIN_PASSWORD = "CHANGE-ME-1234";
+
+
+  /* =========================================================
+     GLOBAL VARIABLES
+  ========================================================= */
+
+  let peer = null;
+  let currentCall = null;
+  let localStream = null;
+  let isMuted = false;
+  let callStartTime = null;
+  let timerInterval = null;
+
+  let currentRoomCode = null;
+
+  let db = null;
+
+
+  /* =========================================================
+     DEFAULT PROFILE
+  ========================================================= */
+
+  const DEFAULT_AVATAR =
+    "data:image/svg+xml;charset=UTF-8," +
+    encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="300"
+           height="300"
+           viewBox="0 0 300 300">
+        <rect width="300" height="300" fill="#333"/>
+        <circle cx="150" cy="115" r="60" fill="#777"/>
+        <path d="M60 270c15-65 55-90 90-90s75 25 90 90"
+              fill="#777"/>
+      </svg>
+    `);
+
+
+  /* =========================================================
+     SCREEN SYSTEM
+  ========================================================= */
+
+  function showScreen(id) {
+
+    document.querySelectorAll(".screen").forEach(screen => {
+      screen.classList.remove("active");
+    });
+
+    document.getElementById(id).classList.add("active");
+  }
+
+
+  /* =========================================================
+     PROFILE
+  ========================================================= */
+
+  function loadProfile() {
+
+    const name =
+      localStorage.getItem("callAppProfileName") ||
+      "Admin";
+
+    const avatar =
+      localStorage.getItem("callAppAvatar") ||
+      DEFAULT_AVATAR;
+
+    document.getElementById("profileNameInput").value = name;
+
+    document.getElementById("adminAvatarPreview").src = avatar;
+
+    document.getElementById("callAvatar").src = avatar;
+
+    document.getElementById("callName").textContent = name;
+  }
+
+
+  function saveProfile() {
+
+    const name =
+      document.getElementById("profileNameInput").value.trim()
+      || "Admin";
+
+    localStorage.setItem(
+      "callAppProfileName",
+      name
+    );
+
+    document.getElementById("profileStatus").textContent =
+      "Profile saved.";
+
+    loadProfile();
+  }
+
+
+  document
+    .getElementById("avatarInput")
+    .addEventListener("change", function() {
+
+      const file = this.files[0];
+
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+
+        localStorage.setItem(
+          "callAppAvatar",
+          e.target.result
+        );
+
+        document.getElementById(
+          "adminAvatarPreview"
+        ).src = e.target.result;
+
+        document.getElementById(
+          "callAvatar"
+        ).src = e.target.result;
+
+        document.getElementById(
+          "profileStatus"
+        ).textContent = "Avatar selected. Click Save Profile.";
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+
+  /* =========================================================
+     ADMIN LOGIN
+  ========================================================= */
+
+  function adminLogin() {
+
+    const password =
+      document.getElementById(
+        "adminPasswordInput"
+      ).value;
+
+    if (password !== ADMIN_PASSWORD) {
+
+      document.getElementById(
+        "adminLoginStatus"
+      ).textContent =
+        "Wrong admin password.";
+
+      return;
+    }
+
+    document.getElementById(
+      "adminLoginStatus"
+    ).textContent =
+      "Admin access granted.";
+
+    loadProfile();
+
+    loadVoiceList();
+
+    showScreen("adminScreen");
+  }
+
+
+  function adminLogout() {
+
+    if (peer) {
+
+      try {
+        peer.destroy();
+      } catch(e) {}
+
+      peer = null;
+    }
+
+    currentRoomCode = null;
+
+    showScreen("landingScreen");
+  }
+
+
+  /* =========================================================
+     PEERJS / ROOM
+  ========================================================= */
+
+  async function getMicrophone() {
+
+    if (localStream) {
+      return localStream;
+    }
+
+    localStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      });
+
+    localStream
+      .getAudioTracks()
+      .forEach(track => {
+        track.enabled = true;
+      });
+
+    return localStream;
+  }
+
+
+  function createRoom() {
+
+    const button =
+      document.getElementById(
+        "createRoomButton"
+      );
+
+    const status =
+      document.getElementById(
+        "roomStatus"
+      );
+
+    button.disabled = true;
+
+    status.textContent =
+      "Creating room...";
+
+    if (peer) {
+
+      try {
+        peer.destroy();
+      } catch(e) {}
+
+      peer = null;
+    }
+
+    peer = new Peer({
+      debug: 1
+    });
+
+
+    peer.on("open", function(id) {
+
+      currentRoomCode = id;
+
+      document.getElementById(
+        "roomCodeDisplay"
+      ).textContent = id;
+
+      document
+        .getElementById("roomBox")
+        .classList.remove("hidden");
+
+      status.textContent =
+        "Room is ACTIVE. Waiting for the other person...";
+
+      button.disabled = false;
+    });
+
+
+    peer.on("call", async function(call) {
+
+      try {
+
+        status.textContent =
+          "Incoming call...";
+
+        const stream =
+          await getMicrophone();
+
+        call.answer(stream);
+
+        currentCall = call;
+
+        setupCallEvents(call);
+
+      } catch(error) {
+
+        console.error(error);
+
+        status.textContent =
+          "Microphone error: " + error.message;
+      }
+
+    });
+
+
+    peer.on("error", function(error) {
+
+      console.error(error);
+
+      status.textContent =
+        "Room error: " + error.type;
+
+      button.disabled = false;
+    });
+
+
+    peer.on("disconnected", function() {
+
+      status.textContent =
+        "Room connection lost. Reconnecting...";
+
+      try {
+        peer.reconnect();
+      } catch(e) {}
+    });
+
+  }
+
+
+  async function joinRoom() {
+
+    const code =
+      document.getElementById(
+        "roomCodeInput"
+      ).value.trim();
+
+    const status =
+      document.getElementById(
+        "joinStatus"
+      );
+
+    if (!code) {
+
+      status.textContent =
+        "Enter a room code.";
+
+      return;
+    }
+
+    status.textContent =
+      "Connecting...";
+
+    try {
+
+      const stream =
+        await getMicrophone();
+
+      if (peer) {
+
+        try {
+          peer.destroy();
+        } catch(e) {}
+
+        peer = null;
+      }
+
+      peer = new Peer({
+        debug: 1
+      });
+
+
+      peer.on("open", function() {
+
+        const call =
+          peer.call(
+            code,
+            stream
+          );
+
+        currentCall = call;
+
+        setupCallEvents(call);
+      });
+
+
+      peer.on("error", function(error) {
+
+        console.error(error);
+
+        status.textContent =
+          "Connection error: " + error.type;
+      });
+
+
+      peer.on("disconnected", function() {
+
+        try {
+          peer.reconnect();
+        } catch(e) {}
+      });
+
+
+    } catch(error) {
+
+      console.error(error);
+
+      status.textContent =
+        "Microphone error: " + error.message;
+    }
+
+  }
+
+
+  function setupCallEvents(call) {
+
+    call.on("stream", function(remoteStream) {
+
+      const audio =
+        document.getElementById(
+          "remoteAudio"
+        );
+
+      audio.srcObject =
+        remoteStream;
+
+      audio.muted = false;
+
+      audio.volume = 1;
+
+      document.getElementById(
+        "callStatus"
+      ).textContent =
+        "Connected";
+
+      document.getElementById(
+        "roomStatus"
+      ).textContent =
+        "Connected to caller.";
+
+      showScreen("callScreen");
+
+      loadProfile();
+
+      startCallTimer();
+
+      audio.play().catch(function() {
+
+        document.getElementById(
+          "soundButton"
+        ).classList.remove("hidden");
+
+      });
+
+    });
+
+
+    call.on("close", function() {
+
+      document.getElementById(
+        "callStatus"
+      ).textContent =
+        "Call ended.";
+
+      stopCallTimer();
+    });
+
+
+    call.on("error", function(error) {
+
+      console.error(error);
+
+      document.getElementById(
+        "callStatus"
+      ).textContent =
+        "Call error.";
+    });
+
+  }
+
+
+  /* =========================================================
+     CONSUMER PAGE
+  ========================================================= */
+
+  function consumerJoinRoom() {
+
+    const code =
+      document.getElementById(
+        "consumerRoomInput"
+      ).value.trim();
+
+    document.getElementById(
+      "consumerStatus"
+    ).textContent =
+      "Connecting...";
+
+    if (!code) {
+
+      document.getElementById(
+        "consumerStatus"
+      ).textContent =
+        "Enter a room code.";
+
+      return;
+    }
+
+    document.getElementById(
+      "roomCodeInput"
+    ).value = code;
+
+    showScreen("landingScreen");
+
+    setTimeout(() => {
+      joinRoom();
+    }, 100);
+
+  }
+
+
+  /* =========================================================
+     CALL SOUND
+  ========================================================= */
+
+  async function enableCallSound() {
+
+    const audio =
+      document.getElementById(
+        "remoteAudio"
+      );
+
+    audio.muted = false;
+
+    audio.volume = 1;
+
+    try {
+
+      await audio.play();
+
+      document.getElementById(
+        "soundButton"
+      ).textContent =
+        "🔊 CALL SOUND ON";
+
+      document.getElementById(
+        "soundButton"
+      ).classList.add("hidden");
+
+    } catch(error) {
+
+      console.error(error);
+
+      alert(
+        "Tap the phone's media volume button and try again."
+      );
+    }
+
+  }
+
+
+  /* =========================================================
+     MUTE
+  ========================================================= */
+
+  function toggleMute() {
+
+    if (!localStream) return;
+
+    const tracks =
+      localStream.getAudioTracks();
+
+    if (!tracks.length) return;
+
+    isMuted = !isMuted;
+
+    tracks.forEach(track => {
+      track.enabled = !isMuted;
+    });
+
+    document.getElementById(
+      "muteButton"
+    ).textContent =
+      isMuted
+        ? "🔇 Unmute"
+        : "🎤 Mute";
+  }
+
+
+  /* =========================================================
+     CALL TIMER
+  ========================================================= */
+
+  function startCallTimer() {
+
+    stopCallTimer();
+
+    callStartTime =
+      Date.now();
+
+    timerInterval =
+      setInterval(function() {
+
+        const elapsed =
+          Math.floor(
+            (Date.now() - callStartTime) / 1000
+          );
+
+        const minutes =
+          Math.floor(elapsed / 60)
+            .toString()
+            .padStart(2, "0");
+
+        const seconds =
+          (elapsed % 60)
+            .toString()
+            .padStart(2, "0");
+
+        document.getElementById(
+          "callTimer"
+        ).textContent =
+          minutes + ":" + seconds;
+
+      }, 1000);
+  }
+
+
+  function stopCallTimer() {
+
+    if (timerInterval) {
+
+      clearInterval(
+        timerInterval
+      );
+
+      timerInterval = null;
+    }
+  }
+
+
+  /* =========================================================
+     END CALL
+  ========================================================= */
+
+  function endCall() {
+
+    if (currentCall) {
+
+      try {
+        currentCall.close();
+      } catch(e) {}
+
+      currentCall = null;
+    }
+
+    if (localStream) {
+
+      localStream
+        .getTracks()
+        .forEach(track => {
+          track.stop();
+        });
+
+      localStream = null;
+    }
+
+    if (peer) {
+
+      try {
+        peer.destroy();
+      } catch(e) {}
+
+      peer = null;
+    }
+
+    stopCallTimer();
+
+    document.getElementById(
+      "callTimer"
+    ).textContent =
+      "00:00";
+
+    document.getElementById(
+      "callStatus"
+    ).textContent =
+      "Call ended.";
+
+    showScreen("landingScreen");
+  }
+
+
+  /* =========================================================
+     COPY ROOM CODE
+  ========================================================= */
+
+  async function copyRoomCode() {
+
+    const code =
+      document.getElementById(
+        "roomCodeDisplay"
+      ).textContent;
+
+    try {
+
+      await navigator.clipboard.writeText(code);
+
+      document.getElementById(
+        "roomStatus"
+      ).textContent =
+        "Room code copied.";
+
+    } catch(e) {
+
+      alert(
+        "Room code: " + code
+      );
+    }
+  }
+
+
+  /* =========================================================
+     INDEXEDDB VOICE LAB
+  ========================================================= */
+
+  function openVoiceDatabase() {
+
+    return new Promise(function(resolve, reject) {
+
+      const request =
+        indexedDB.open(
+          "CallAppVoiceLab",
+          1
+        );
+
+
+      request.onupgradeneeded =
+        function(event) {
+
+          const database =
+            event.target.result;
+
+          if (
+            !database.objectStoreNames.contains(
+              "voices"
+            )
+          ) {
+
+            const store =
+              database.createObjectStore(
+                "voices",
+                {
+                  keyPath: "id",
+                  autoIncrement: true
+                }
+              );
+
+            store.createIndex(
+              "name",
+              "name",
+              {
+                unique: false
+              }
+            );
+
+          }
+        };
+
+
+      request.onsuccess =
+        function(event) {
+
+          db =
+            event.target.result;
+
+          resolve(db);
+        };
+
+
+      request.onerror =
+        function(event) {
+
+          reject(
+            event.target.error
+          );
+        };
+
+    });
+  }
+
+
+  async function saveVoiceSample() {
+
+    const nameInput =
+      document.getElementById(
+        "voiceNameInput"
+      );
+
+    const fileInput =
+      document.getElementById(
+        "voiceFileInput"
+      );
+
+    const status =
+      document.getElementById(
+        "voiceSaveStatus"
+      );
+
+    const name =
+      nameInput.value.trim();
+
+    const file =
+      fileInput.files[0];
+
+
+    if (!name) {
+
+      status.textContent =
+        "Enter a name for the voice.";
+
+      return;
+    }
+
+
+    if (!file) {
+
+      status.textContent =
+        "Choose an audio or video file.";
+
+      return;
+    }
+
+
+    try {
+
+      if (!db) {
+        await openVoiceDatabase();
+      }
+
+
+      const voice = {
+
+        name: name,
+
+        fileName: file.name,
+
+        fileType: file.type,
+
+        fileSize: file.size,
+
+        createdAt: new Date().toISOString(),
+
+        blob: file
+
+      };
+
+
+      await new Promise(
+        function(resolve, reject) {
+
+          const transaction =
+            db.transaction(
+              ["voices"],
+              "readwrite"
+            );
+
+          const store =
+            transaction.objectStore(
+              "voices"
+            );
+
+          const request =
+            store.add(voice);
+
+
+          request.onsuccess =
+            function() {
+              resolve();
+            };
+
+
+          request.onerror =
+            function(event) {
+              reject(
+                event.target.error
+              );
+            };
+
+        }
+      );
+
+
+      nameInput.value = "";
+
+      fileInput.value = "";
+
+      status.textContent =
+        "Voice sample saved successfully.";
+
+      loadVoiceList();
+
+    } catch(error) {
+
+      console.error(error);
+
+      status.textContent =
+        "Could not save voice: " +
+        error.message;
+    }
+
+  }
+
+
+  async function getAllVoices() {
+
+    if (!db) {
+      await openVoiceDatabase();
+    }
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            ["voices"],
+            "readonly"
+          );
+
+        const store =
+          transaction.objectStore(
+            "voices"
+          );
+
+        const request =
+          store.getAll();
+
+
+        request.onsuccess =
+          function() {
+
+            resolve(
+              request.result || []
+            );
+          };
+
+
+        request.onerror =
+          function(event) {
+
+            reject(
+              event.target.error
+            );
+          };
+
+      }
+    );
+  }
+
+
+  async function loadVoiceList() {
+
+    const container =
+      document.getElementById(
+        "voiceList"
+      );
+
+    if (!container) return;
+
+    container.innerHTML =
+      "Loading voices...";
+
+
+    try {
+
+      const voices =
+        await getAllVoices();
+
+
+      if (!voices.length) {
+
+        container.innerHTML = `
+          <div class="status">
+            No saved voices yet.
+          </div>
+        `;
+
+        return;
+      }
+
+
+      container.innerHTML = "";
+
+
+      voices
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt) -
+            new Date(a.createdAt)
+        )
+        .forEach(function(voice) {
+
+          const item =
+            document.createElement(
+              "div"
+            );
+
+          item.className =
+            "voice-item";
+
+
+          const size =
+            formatFileSize(
+              voice.fileSize
+            );
+
+
+          item.innerHTML = `
+
+            <div class="voice-name">
+              ${escapeHtml(voice.name)}
+            </div>
+
+            <div class="voice-info">
+              ${escapeHtml(voice.fileName)}
+              • ${size}
+            </div>
+
+            <div class="voice-actions">
+
+              <button
+                class="secondary"
+                onclick="testVoice(${voice.id})"
+              >
+                ▶ Test
+              </button>
+
+              <button
+                class="danger"
+                onclick="deleteVoice(${voice.id})"
+              >
+                Delete
+              </button>
+
+            </div>
+
+            <div id="audio-${voice.id}"></div>
+          `;
+
+
+          container.appendChild(item);
+
+        });
+
+
+    } catch(error) {
+
+      console.error(error);
+
+      container.innerHTML =
+        "Could not load saved voices.";
+    }
+
+  }
+
+
+  async function testVoice(id) {
+
+    try {
+
+      const voice =
+        await getVoice(id);
+
+      if (!voice) return;
+
+
+      const audioContainer =
+        document.getElementById(
+          "audio-" + id
+        );
+
+      audioContainer.innerHTML = "";
+
+
+      const audio =
+        document.createElement(
+          "audio"
+        );
+
+      audio.controls = true;
+
+      audio.autoplay = true;
+
+      audio.src =
+        URL.createObjectURL(
+          voice.blob
+        );
+
+
+      audioContainer.appendChild(
+        audio
+      );
+
+      audio.play().catch(
+        () => {}
+      );
+
+    } catch(error) {
+
+      console.error(error);
+
+      alert(
+        "Unable to play this voice sample."
+      );
+    }
+
+  }
+
+
+  async function getVoice(id) {
+
+    if (!db) {
+      await openVoiceDatabase();
+    }
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            ["voices"],
+            "readonly"
+          );
+
+        const store =
+          transaction.objectStore(
+            "voices"
+          );
+
+        const request =
+          store.get(id);
+
+
+        request.onsuccess =
+          function() {
+
+            resolve(
+              request.result
+            );
+          };
+
+
+        request.onerror =
+          function(event) {
+
+            reject(
+              event.target.error
+            );
+          };
+
+      }
+    );
+  }
+
+
+  async function deleteVoice(id) {
+
+    const confirmed =
+      confirm(
+        "Delete this saved voice?"
+      );
+
+    if (!confirmed) return;
+
+
+    if (!db) {
+      await openVoiceDatabase();
+    }
+
+
+    await new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            ["voices"],
+            "readwrite"
+          );
+
+        const store =
+          transaction.objectStore(
+            "voices"
+          );
+
+        const request =
+          store.delete(id);
+
+
+        request.onsuccess =
+          function() {
+            resolve();
+          };
+
+
+        request.onerror =
+          function(event) {
+
+            reject(
+              event.target.error
+            );
+          };
+
+      }
+    );
+
+
+    loadVoiceList();
+  }
+
+
+  /* =========================================================
+     HELPERS
+  ========================================================= */
+
+  function formatFileSize(bytes) {
+
+    if (!bytes) {
+      return "0 B";
+    }
+
+    const units = [
+      "B",
+      "KB",
+      "MB",
+      "GB"
+    ];
+
+    const index =
+      Math.floor(
+        Math.log(bytes) /
+        Math.log(1024)
+      );
+
+    return (
+      (bytes /
+        Math.pow(1024, index))
+        .toFixed(1)
+      + " "
+      + units[index]
+    );
+  }
+
+
+  function escapeHtml(value) {
+
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+
+  /* =========================================================
+     INITIALIZE
+  ========================================================= */
+
+  window.addEventListener(
+    "load",
+    async function() {
+
+      loadProfile();
+
+      try {
+        await openVoiceDatabase();
+      } catch(error) {
+        console.error(
+          "Voice database error:",
+          error
+        );
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>
