@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Call App</title>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#101010;
+  color:white;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}
+header{
+  padding:22px 20px;
+  border-bottom:1px solid #333;
+  display:flex;
+  justify-content:space-between
+}
+h1{margin:0;font-size:28px}
+main{max-width:520px;margin:auto;padding:25px 20px}
+.card{
+  background:#181818;
+  border:1px solid #292929;
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:18px
+}
+.avatar{
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  display:block;
+  margin:10px auto 18px;
+  object-fit:cover;
+  background:#292929;
+  border:5px solid #3b3b3b
+}
+.name{text-align:center;font-size:27px;font-weight:bold}
+.sub{text-align:center;color:#999;margin-top:5px}
+button{
+  width:100%;
+  border:0;
+  border-radius:14px;
+  padding:16px;
+  margin-top:12px;
+  font-size:17px;
+  font-weight:bold;
+  background:#292929;
+  color:white
+}
+.primary{background:#4ade80;color:#07120a}
+.danger{background:#ef4444}
+.row{display:flex;gap:10px}
+.row button{flex:1}
+input{
+  width:100%;
+  padding:16px;
+  border-radius:12px;
+  border:1px solid #444;
+  background:#0d0d0d;
+  color:white;
+  font-size:18px
+}
+label{
+  display:block;
+  color:#aaa;
+  margin:12px 0 6px
+}
+.room{
+  text-align:center;
+  font-size:18px;
+  font-weight:bold;
+  padding:15px;
+  background:#0b0b0b;
+  border-radius:12px;
+  word-break:break-all
+}
+.notice{
+  text-align:center;
+  color:#aaa;
+  line-height:1.5
+}
+.hidden{display:none}
+#remoteAudio{width:100%}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Call App</h1>
+  <div id="status">Ready</div>
+</header>
+
+<main>
+
+<!-- HOME -->
+<section id="home">
+
+<div class="card">
+
+<img id="homeAvatar" class="avatar">
+
+<div id="homeName" class="name">My Avatar</div>
+<div class="sub">Voice-only calling</div>
+
+<button id="startBtn" class="primary">
+Start Voice Call
+</button>
+
+<button id="joinBtn">
+Join Voice Call
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Avatar & Profile</h2>
+
+<label>Name</label>
+<input id="nameInput" placeholder="My Avatar">
+
+<button id="saveName">
+Save Name
+</button>
+
+<label>Change Avatar</label>
+<input id="avatarInput" type="file" accept="image/*">
+
+</div>
+
+</section>
+
+
+<!-- HOST -->
+<section id="host" class="hidden">
+
+<div class="card">
+
+<h2>Your Room</h2>
+
+<p class="notice">
+Give this room code to the other person.
+</p>
+
+<div id="roomCode" class="room">
+Creating...
+</div>
+
+<button id="copyCode">
+Copy Room Code
+</button>
+
+<p id="hostStatus" class="notice">
+Waiting for the other person...
+</p>
+
+</div>
+
+</section>
+
+
+<!-- JOIN -->
+<section id="join" class="hidden">
+
+<div class="card">
+
+<h2>Join Voice Call</h2>
+
+<label>Enter room code</label>
+
+<input id="roomInput"
+placeholder="Enter room code"
+autocomplete="off">
+
+<button id="connectBtn" class="primary">
+Join Call
+</button>
+
+<button id="backBtn">
+Back
+</button>
+
+</div>
+
+</section>
+
+
+<!-- CALL -->
+<section id="call" class="hidden">
+
+<div class="card">
+
+<img id="callAvatar" class="avatar">
+
+<div id="callName" class="name">
+My Avatar
+</div>
+
+<div id="callStatus" class="sub">
+Connecting...
+</div>
+
+<div id="timer" class="sub">
+00:00
+</div>
+
+</div>
+
+
+<div class="card">
+
+<p class="notice">
+🎙️ Voice-only call<br>
+Camera is completely disabled.
+</p>
+
+<audio id="remoteAudio"
+autoplay
+playsinline
+controls>
+</audio>
+
+</div>
+
+
+<div class="row">
+
+<button id="muteBtn">
+🎙️ Mute
+</button>
+
+<button id="endBtn" class="danger">
+☎️ End Call
+</button>
+
+</div>
+
+</section>
+
+</main>
+
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+let peer = null;
+let localStream = null;
+let currentCall = null;
+let timer = null;
+let seconds = 0;
+
+
+/* DEFAULT AVATAR */
+
+const defaultAvatar =
+"data:image/svg+xml;charset=UTF-8," +
+encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">
+<rect width="400" height="400" fill="#292929"/>
+<circle cx="200" cy="140" r="70" fill="#7aa7d9"/>
+<path d="M90 330c10-80 210-80 220 0" fill="#7aa7d9"/>
+</svg>
+`);
+
+
+/* PROFILE */
+
+function getName(){
+  return localStorage.getItem("call_name") || "My Avatar";
+}
+
+function getAvatar(){
+  return localStorage.getItem("call_avatar") || defaultAvatar;
+}
+
+function refreshProfile(){
+
+  $("homeAvatar").src = getAvatar();
+  $("callAvatar").src = getAvatar();
+
+  $("homeName").textContent = getName();
+  $("callName").textContent = getName();
+
+  $("nameInput").value = getName();
+}
+
+refreshProfile();
+
+
+/* SAVE NAME */
+
+$("saveName").onclick = function(){
+
+  let name = $("nameInput").value.trim();
+
+  if(!name) name = "My Avatar";
+
+  localStorage.setItem("call_name",name);
+
+  refreshProfile();
+};
+
+
+/* AVATAR */
+
+$("avatarInput").onchange = function(e){
+
+  const file = e.target.files[0];
+
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(){
+
+    localStorage.setItem(
+      "call_avatar",
+      reader.result
+    );
+
+    refreshProfile();
+  };
+
+  reader.readAsDataURL(file);
+};
+
+
+/* SCREEN */
+
+function show(id){
+
+  ["home","host","join","call"].forEach(
+    x => $(x).classList.add("hidden")
+  );
+
+  $(id).classList.remove("hidden");
+}
+
+
+/* MICROPHONE */
+
+async function getMicrophone(){
+
+  return await navigator.mediaDevices.getUserMedia({
+    audio:true,
+    video:false
+  });
+
+}
+
+
+/* TIMER */
+
+function startTimer(){
+
+  seconds = 0;
+
+  $("timer").textContent = "00:00";
+
+  clearInterval(timer);
+
+  timer = setInterval(function(){
+
+    seconds++;
+
+    let minutes =
+      String(Math.floor(seconds / 60))
+      .padStart(2,"0");
+
+    let secs =
+      String(seconds % 60)
+      .padStart(2,"0");
+
+    $("timer").textContent =
+      minutes + ":" + secs;
+
+  },1000);
+}
+
+
+function stopTimer(){
+  clearInterval(timer);
+}
+
+
+/* CONNECT CALL */
+
+function setupCall(call){
+
+  currentCall = call;
+
+  show("call");
+
+  $("status").textContent = "On call";
+
+  $("callStatus").textContent =
+    "Connecting...";
+
+  startTimer();
+
+
+  call.on("stream",function(remoteStream){
+
+    $("remoteAudio").srcObject =
+      remoteStream;
+
+    $("remoteAudio")
+      .play()
+      .catch(()=>{});
+
+    $("callStatus").textContent =
+      "Connected";
+  });
+
+
+  call.on("close",function(){
+
+    $("callStatus").textContent =
+      "Call ended";
+
+  });
+
+
+  call.on("error",function(error){
+
+    console.error(error);
+
+    $("callStatus").textContent =
+      "Connection error";
+  });
+
+}
+
+
+/* START CALL */
+
+$("startBtn").onclick = async function(){
+
+  try{
+
+    $("status").textContent =
+      "Starting...";
+
+    localStream =
+      await getMicrophone();
+
+
+    peer = new Peer();
+
+
+    peer.on("open",function(id){
+
+      $("roomCode").textContent = id;
+
+      $("hostStatus").textContent =
+        "Waiting for the other person to join...";
+
+      $("status").textContent =
+        "Room ready";
+
+      show("host");
+
+    });
+
+
+    peer.on("call",function(call){
+
+      $("hostStatus").textContent =
+        "Incoming call...";
+
+      call.answer(localStream);
+
+      setupCall(call);
+
+    });
+
+
+    peer.on("error",function(error){
+
+      console.error(error);
+
+      alert(
+        "Connection error: " +
+        error.message
+      );
+
+    });
+
+  }
+
+  catch(error){
+
+    console.error(error);
+
+    alert(
+      "Please allow microphone access and try again."
+    );
+
+  }
+
+};
+
+
+/* JOIN CALL */
+
+$("joinBtn").onclick = function(){
+
+  show("join");
+
+};
+
+
+$("backBtn").onclick = function(){
+
+  show("home");
+
+};
+
+
+$("connectBtn").onclick = async function(){
+
+  const room =
+    $("roomInput").value.trim();
+
+  if(!room){
+
+    alert("Enter the room code.");
+
+    return;
+  }
+
+
+  try{
+
+    $("status").textContent =
+      "Connecting...";
+
+    localStream =
+      await getMicrophone();
+
+
+    peer = new Peer();
+
+
+    peer.on("open",function(){
+
+      const call =
+        peer.call(room,localStream);
+
+      setupCall(call);
+
+    });
+
+
+    peer.on("error",function(error){
+
+      console.error(error);
+
+      alert(
+        "Could not join the room. Check the room code."
+      );
+
+      $("status").textContent =
+        "Ready";
+
+    });
+
+  }
+
+  catch(error){
+
+    console.error(error);
+
+    alert(
+      "Please allow microphone access and try again."
+    );
+
+  }
+
+};
+
+
+/* COPY ROOM CODE */
+
+$("copyCode").onclick = async function(){
+
+  const code =
+    $("roomCode").textContent;
+
+  try{
+
+    await navigator.clipboard.writeText(code);
+
+    $("copyCode").textContent =
+      "Copied ✓";
+
+    setTimeout(function(){
+
+      $("copyCode").textContent =
+        "Copy Room Code";
+
+    },1500);
+
+  }
+
+  catch(error){
+
+    prompt(
+      "Copy this room code:",
+      code
+    );
+
+  }
+
+};
+
+
+/* MUTE */
+
+$("muteBtn").onclick = function(){
+
+  if(!localStream) return;
+
+  const track =
+    localStream.getAudioTracks()[0];
+
+  if(!track) return;
+
+  track.enabled =
+    !track.enabled;
+
+  $("muteBtn").textContent =
+    track.enabled
+      ? "🎙️ Mute"
+      : "🔇 Unmute";
+
+};
+
+
+/* END CALL */
+
+$("endBtn").onclick = function(){
+
+  if(currentCall){
+
+    try{
+      currentCall.close();
+    }catch(e){}
+
+  }
+
+  if(localStream){
+
+    localStream
+      .getTracks()
+      .forEach(track => track.stop());
+
+  }
+
+  if(peer){
+
+    try{
+      peer.destroy();
+    }catch(e){}
+
+  }
+
+  currentCall = null;
+  localStream = null;
+  peer = null;
+
+  stopTimer();
+
+  $("remoteAudio").srcObject = null;
+
+  $("status").textContent =
+    "Ready";
+
+  show("home");
+
+};
+
+
+</script>
+
+</body>
+  </html>
